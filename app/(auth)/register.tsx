@@ -3,8 +3,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,90 +20,54 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    nim: "",
-    email: "",
-    phone: "",
-    angkatan: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [nim, setNim] = useState("");
+  const [angkatan, setAngkatan] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // Validation
-    if (!formData.name.trim()) {
-      Alert.alert("Error", "Nama lengkap harus diisi");
+    if (!email || !password || !confirmPassword || !name || !nim || !angkatan) {
+      Alert.alert("Error", "Semua field harus diisi");
       return;
     }
-    if (!formData.nim.trim()) {
-      Alert.alert("Error", "NIM harus diisi");
-      return;
-    }
-    if (!formData.email.trim()) {
-      Alert.alert("Error", "Email harus diisi");
-      return;
-    }
-    if (!formData.phone.trim()) {
-      Alert.alert("Error", "No. Telepon harus diisi");
-      return;
-    }
-    if (!formData.angkatan.trim()) {
-      Alert.alert("Error", "Angkatan harus diisi");
-      return;
-    }
-    if (!formData.password) {
-      Alert.alert("Error", "Password harus diisi");
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
+
+    if (password !== confirmPassword) {
       Alert.alert("Error", "Password tidak cocok");
       return;
     }
-    if (formData.password.length < 6) {
+
+    if (password.length < 6) {
       Alert.alert("Error", "Password minimal 6 karakter");
       return;
     }
 
-    // Register user
-    try {
-      await register({
-        name: formData.name,
-        nim: formData.nim,
-        email: formData.email,
-        phone: formData.phone,
-        angkatan: formData.angkatan,
-        password: formData.password,
-      });
+    setLoading(true);
 
-      // Success - redirect to login
-      Alert.alert(
-        "Registrasi Berhasil!",
-        "Akun Anda telah dibuat. Silakan login.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(auth)/login"),
-          },
-        ]
-      );
+    try {
+      await register(email, password, name, nim, angkatan);
+      Alert.alert("Sukses", "Registrasi berhasil!");
+      router.replace("/(tabs)");
     } catch (error: any) {
-      console.error("Registration error:", error);
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <ScrollView
-          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -114,41 +78,22 @@ export default function RegisterScreen() {
             >
               <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
-          </View>
-
-          {/* Logo & Title */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/images/hmif-logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
             <Text style={styles.title}>Daftar Akun</Text>
-            <Text style={styles.subtitle}>
-              Buat akun untuk bergabung dengan HMIF UMMI
-            </Text>
+            <Text style={styles.subtitle}>Buat akun baru HMIF UMMI</Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            {/* Nama Lengkap */}
+            {/* Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nama Lengkap</Text>
               <View style={styles.inputContainer}>
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+                <Ionicons name="person-outline" size={20} color="#666" />
                 <TextInput
                   style={styles.input}
                   placeholder="Masukkan nama lengkap"
-                  placeholderTextColor="#999"
-                  value={formData.name}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, name: text })
-                  }
+                  value={name}
+                  onChangeText={setName}
                   autoCapitalize="words"
                 />
               </View>
@@ -158,68 +103,13 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>NIM</Text>
               <View style={styles.inputContainer}>
-                <Ionicons
-                  name="card-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+                <Ionicons name="card-outline" size={20} color="#666" />
                 <TextInput
                   style={styles.input}
                   placeholder="Masukkan NIM"
-                  placeholderTextColor="#999"
-                  value={formData.nim}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, nim: text })
-                  }
+                  value={nim}
+                  onChangeText={setNim}
                   keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="nama@student.ummi.ac.id"
-                  placeholderTextColor="#999"
-                  value={formData.email}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, email: text })
-                  }
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            {/* No. Telepon */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>No. Telepon</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons
-                  name="call-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="08xxxxxxxxxx"
-                  placeholderTextColor="#999"
-                  value={formData.phone}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, phone: text })
-                  }
-                  keyboardType="phone-pad"
                 />
               </View>
             </View>
@@ -228,22 +118,30 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Angkatan</Text>
               <View style={styles.inputContainer}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+                <Ionicons name="calendar-outline" size={20} color="#666" />
                 <TextInput
                   style={styles.input}
-                  placeholder="2024"
-                  placeholderTextColor="#999"
-                  value={formData.angkatan}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, angkatan: text })
-                  }
+                  placeholder="Contoh: 2024"
+                  value={angkatan}
+                  onChangeText={setAngkatan}
                   keyboardType="numeric"
                   maxLength={4}
+                />
+              </View>
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color="#666" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="nama@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
               </View>
             </View>
@@ -252,67 +150,47 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputContainer}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+                <Ionicons name="lock-closed-outline" size={20} color="#666" />
                 <TextInput
                   style={styles.input}
                   placeholder="Minimal 6 karakter"
-                  placeholderTextColor="#999"
-                  value={formData.password}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, password: text })
-                  }
+                  value={password}
+                  onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  autoCapitalize="none"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
                 >
                   <Ionicons
                     name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color="#999"
+                    color="#666"
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Konfirmasi Password */}
+            {/* Confirm Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Konfirmasi Password</Text>
               <View style={styles.inputContainer}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color="#999"
-                  style={styles.inputIcon}
-                />
+                <Ionicons name="lock-closed-outline" size={20} color="#666" />
                 <TextInput
                   style={styles.input}
                   placeholder="Ulangi password"
-                  placeholderTextColor="#999"
-                  value={formData.confirmPassword}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, confirmPassword: text })
-                  }
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
                 />
                 <TouchableOpacity
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeButton}
                 >
                   <Ionicons
                     name={
                       showConfirmPassword ? "eye-outline" : "eye-off-outline"
                     }
                     size={20}
-                    color="#999"
+                    color="#666"
                   />
                 </TouchableOpacity>
               </View>
@@ -320,24 +198,29 @@ export default function RegisterScreen() {
 
             {/* Register Button */}
             <TouchableOpacity
-              style={styles.registerButton}
+              style={[
+                styles.registerButton,
+                loading && styles.registerButtonDisabled,
+              ]}
               onPress={handleRegister}
+              disabled={loading}
               activeOpacity={0.8}
             >
-              <Text style={styles.registerButtonText}>Daftar</Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.registerButtonText}>Daftar</Text>
+              )}
             </TouchableOpacity>
 
             {/* Login Link */}
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Sudah punya akun? </Text>
-              <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-                <Text style={styles.loginLink}>Login</Text>
+              <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+                <Text style={styles.loginLink}>Masuk</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpace} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -352,12 +235,13 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
+    marginTop: 20,
+    marginBottom: 32,
   },
   backButton: {
     width: 40,
@@ -366,80 +250,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     justifyContent: "center",
     alignItems: "center",
-  },
-  logoContainer: {
-    alignItems: "center",
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-  },
-  logo: {
-    width: 80,
-    height: 80,
     marginBottom: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
     color: "#000",
     marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     color: "#666",
-    textAlign: "center",
   },
   form: {
-    paddingHorizontal: 24,
+    gap: 20,
   },
   inputGroup: {
-    marginBottom: 20,
+    gap: 8,
   },
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: "#000",
-    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f5f5f5",
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#f0f0f0",
     paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
+    height: 52,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: "#f5f5f5",
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
     fontSize: 16,
     color: "#000",
   },
-  eyeButton: {
-    padding: 4,
-  },
   registerButton: {
     backgroundColor: "#000",
+    height: 52,
     borderRadius: 12,
-    paddingVertical: 16,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 12,
+  },
+  registerButtonDisabled: {
+    opacity: 0.6,
   },
   registerButtonText: {
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
-    letterSpacing: 0.5,
   },
   loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 24,
+    marginTop: 8,
   },
   loginText: {
     fontSize: 14,
@@ -449,8 +320,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#000",
-  },
-  bottomSpace: {
-    height: 40,
   },
 });

@@ -1,32 +1,41 @@
-import { Redirect } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "expo-router";
+import { useEffect } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  // Show loading while checking auth
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (loading) return;
 
-  // Redirect based on auth status
-  if (isAuthenticated) {
-    return <Redirect href="/(tabs)" />;
-  }
+    // Simple redirect based on auth state
+    const timeout = setTimeout(() => {
+      if (user) {
+        console.log("User found, redirecting to tabs...");
+        router.replace("/(tabs)");
+      } else {
+        console.log("No user, redirecting to login...");
+        router.replace("/(auth)/login");
+      }
+    }, 100);
 
-  return <Redirect href="/(auth)/login" />;
+    return () => clearTimeout(timeout);
+  }, [user, loading]);
+
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#000" />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
 });

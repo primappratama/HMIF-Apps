@@ -1,91 +1,76 @@
 import {
-  getCurrentUser,
-  loginUser,
-  logoutUser,
-  registerUser,
+  login as loginUser,
+  logout as logoutUser,
+  register as registerUser,
+  User,
 } from "@/services/auth.service";
-import { LoginCredentials, User } from "@/types";
-import { useRouter, useSegments } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (userData: {
-    name: string;
-    nim: string;
-    email: string;
-    phone: string;
-    angkatan: string;
-    password: string;
-  }) => Promise<{ success: boolean; user: any }>; // ← Atau ini
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    nim: string,
+    angkatan: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const segments = useSegments();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUser();
   }, []);
 
-  useEffect(() => {
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (isLoading) {
-      return;
-    }
-
-    if (!user && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (user && inAuthGroup) {
-      router.replace("/(tabs)");
-    }
-  }, [user, segments, isLoading]);
-
   const loadUser = async () => {
     try {
-      const userData = await getCurrentUser();
+      const userData = await AsyncStorage.getItem("user");
       if (userData) {
-        setUser(userData.user);
+        const parsedUser = JSON.parse(userData);
+        console.log("Loaded user:", parsedUser); // Debug log
+        setUser(parsedUser);
       }
     } catch (error) {
       console.error("Error loading user:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await loginUser(credentials);
-      setUser(response.user);
-    } catch (error: any) {
-      alert(error.message || "Login gagal");
+      const userData = await loginUser(email, password);
+      console.log("Login successful, user data:", userData); // Debug log
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error("Login error:", error);
       throw error;
     }
   };
 
-  const register = async (userData: {
-    name: string;
-    nim: string;
-    email: string;
-    phone: string;
-    angkatan: string;
-    password: string;
-  }) => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    nim: string,
+    angkatan: string
+  ) => {
     try {
-      const response = await registerUser(userData);
-      return response;
-    } catch (error: any) {
-      alert(error.message || "Registrasi gagal");
+      const userData = await registerUser(email, password, name, nim, angkatan);
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error("Register error:", error);
       throw error;
     }
   };
@@ -93,32 +78,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await logoutUser();
+      await AsyncStorage.removeItem("user");
       setUser(null);
     } catch (error) {
       console.error("Logout error:", error);
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        register,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
+}

@@ -1,193 +1,125 @@
-import { AuthResponse, LoginCredentials } from "@/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+export type UserRole = "admin" | "pengurus" | "anggota";
 
-const USERS_STORAGE_KEY = "@hmif_users";
-const AUTH_TOKEN_KEY = "@hmif_auth_token";
-const USER_DATA_KEY = "@hmif_user_data";
-
-// Register new user
-export const registerUser = async (userData: {
+export interface User {
+  id: string;
+  email: string;
   name: string;
   nim: string;
-  email: string;
-  phone: string;
   angkatan: string;
-  password: string;
-}) => {
-  try {
-    // Get existing users
-    const existingUsersJson = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-    const existingUsers = existingUsersJson
-      ? JSON.parse(existingUsersJson)
-      : [];
+  role: UserRole;
+}
 
-    // Check if NIM or Email already exists
-    const nimExists = existingUsers.find((u: any) => u.nim === userData.nim);
-    const emailExists = existingUsers.find(
-      (u: any) => u.email === userData.email
-    );
-
-    if (nimExists) {
-      throw new Error("NIM sudah terdaftar");
-    }
-
-    if (emailExists) {
-      throw new Error("Email sudah terdaftar");
-    }
-
-    // First user = admin, rest = member
-    const role = existingUsers.length === 0 ? "admin" : "member";
-
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      nim: userData.nim,
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      angkatan: userData.angkatan,
-      password: userData.password,
-      role: role, // ← AUTO ASSIGN ROLE
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save to storage
-    const updatedUsers = [...existingUsers, newUser];
-    await AsyncStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-
-    return {
-      success: true,
-      user: {
-        id: newUser.id,
-        nim: newUser.nim,
-        name: newUser.name,
-        email: newUser.email,
-        angkatan: newUser.angkatan,
-        role: newUser.role,
-      },
-    };
-  } catch (error) {
-    throw error;
-  }
+// Super Admin Credentials
+const SUPER_ADMIN = {
+  email: "hmif@ummi.ac.id",
+  password: "hmifummiti23",
+  user: {
+    id: "admin-001",
+    email: "hmif@ummi.ac.id",
+    name: "HMIF Admin",
+    nim: "000000",
+    angkatan: "2023",
+    role: "admin" as UserRole,
+  },
 };
 
-// Update user role (admin only)
+// Mock user database (simulated)
+let users: User[] = [];
+
+export const login = async (email: string, password: string): Promise<User> => {
+  // Validate inputs
+  if (!email || !password) {
+    throw new Error("Email dan password harus diisi");
+  }
+
+  // Check if Super Admin
+  if (
+    email.toLowerCase().trim() === SUPER_ADMIN.email &&
+    password.trim() === SUPER_ADMIN.password
+  ) {
+    return SUPER_ADMIN.user;
+  }
+
+  // Check regular users
+  const user = users.find(
+    (u) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
+  );
+
+  if (!user) {
+    throw new Error("Email atau password salah");
+  }
+
+  // In real app, check password hash
+  // For now, just return user (password check simulated)
+  return user;
+};
+
+export const register = async (
+  email: string,
+  password: string,
+  name: string,
+  nim: string,
+  angkatan: string
+): Promise<User> => {
+  // Validate inputs
+  if (!email || !password || !name || !nim || !angkatan) {
+    throw new Error("Semua field harus diisi");
+  }
+
+  // Prevent registration with super admin email
+  if (email.toLowerCase().trim() === SUPER_ADMIN.email) {
+    throw new Error("Email ini tidak dapat digunakan untuk registrasi");
+  }
+
+  // Check if email already exists
+  const existingUser = users.find(
+    (u) => u.email.toLowerCase().trim() === email.toLowerCase().trim()
+  );
+
+  if (existingUser) {
+    throw new Error("Email sudah terdaftar");
+  }
+
+  // Check if NIM already exists
+  const existingNim = users.find((u) => u.nim === nim.trim());
+
+  if (existingNim) {
+    throw new Error("NIM sudah terdaftar");
+  }
+
+  // Create new user (always as 'anggota' - no admin registration!)
+  const newUser: User = {
+    id: Date.now().toString(),
+    email: email.trim(),
+    name: name.trim(),
+    nim: nim.trim(),
+    angkatan: angkatan.trim(),
+    role: "anggota", // Always anggota, no admin/pengurus via registration
+  };
+
+  users.push(newUser);
+  return newUser;
+};
+
+export const logout = async (): Promise<void> => {
+  // Clear session
+  return Promise.resolve();
+};
+
+export const getAllUsers = async (): Promise<User[]> => {
+  return users;
+};
+
 export const updateUserRole = async (
   userId: string,
-  newRole: "member" | "admin" | "pengurus"
-) => {
-  try {
-    const usersJson = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : [];
-
-    const userIndex = users.findIndex((u: any) => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error("User tidak ditemukan");
-    }
-
+  newRole: UserRole
+): Promise<void> => {
+  const userIndex = users.findIndex((u) => u.id === userId);
+  if (userIndex !== -1) {
     users[userIndex].role = newRole;
-    await AsyncStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-
-    return { success: true };
-  } catch (error) {
-    throw error;
   }
 };
 
-// Get all users (admin only)
-export const getAllUsers = async () => {
-  try {
-    const usersJson = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : [];
-
-    // Remove password from response
-    return users.map((u: any) => ({
-      id: u.id,
-      nim: u.nim,
-      name: u.name,
-      email: u.email,
-      angkatan: u.angkatan,
-      role: u.role,
-      createdAt: u.createdAt,
-    }));
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Login user
-export const loginUser = async (
-  credentials: LoginCredentials
-): Promise<AuthResponse> => {
-  try {
-    // Get registered users
-    const usersJson = await AsyncStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : [];
-
-    // Find user by NIM or Email
-    const user = users.find(
-      (u: any) =>
-        (u.nim === credentials.identifier ||
-          u.email === credentials.identifier) &&
-        u.password === credentials.password
-    );
-
-    if (!user) {
-      throw new Error("NIM/Email atau Password salah");
-    }
-
-    // Generate mock token
-    const token = `token_${user.id}_${Date.now()}`;
-
-    // Save auth data
-    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-    await AsyncStorage.setItem(
-      USER_DATA_KEY,
-      JSON.stringify({
-        id: user.id,
-        nim: user.nim,
-        name: user.name,
-        email: user.email,
-        angkatan: user.angkatan,
-        role: user.role,
-      })
-    );
-
-    return {
-      user: {
-        id: user.id,
-        nim: user.nim,
-        name: user.name,
-        email: user.email,
-        angkatan: user.angkatan,
-        role: user.role,
-      },
-      token,
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Logout user
-export const logoutUser = async (): Promise<void> => {
-  await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-  await AsyncStorage.removeItem(USER_DATA_KEY);
-};
-
-// Get current user
-export const getCurrentUser = async () => {
-  try {
-    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-    const userDataJson = await AsyncStorage.getItem(USER_DATA_KEY);
-
-    if (!token || !userDataJson) {
-      return null;
-    }
-
-    const userData = JSON.parse(userDataJson);
-    return { user: userData, token };
-  } catch (error) {
-    return null;
-  }
+export const deleteUser = async (userId: string): Promise<void> => {
+  users = users.filter((u) => u.id !== userId);
 };

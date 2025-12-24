@@ -13,22 +13,29 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
   const router = useRouter();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => logout(),
-      },
-    ]);
-  };
-
-  const handleComingSoon = (feature: string) => {
-    Alert.alert("Coming Soon", `Fitur ${feature} akan segera hadir!`);
+    Alert.alert(
+      "Logout",
+      "Apakah Anda yakin ingin keluar?",
+      [
+        {
+          text: "Batal",
+          style: "cancel",
+        },
+        {
+          text: "Keluar",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/(auth)/login");
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -37,208 +44,203 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={40} color="#666" />
-            </View>
-            <View style={styles.editBadge}>
-              <Ionicons name="camera" size={16} color="#fff" />
-            </View>
+            <Ionicons name="person" size={48} color="#666" />
           </View>
-
-          <Text style={styles.name}>{user?.name || "Mahasiswa HMIF"}</Text>
-          <Text style={styles.email}>
-            {user?.email || "mahasiswa@ummi.ac.id"}
-          </Text>
-
-          <View style={styles.badgesRow}>
-            <View style={styles.badge}>
-              <Ionicons name="calendar-outline" size={14} color="#666" />
-              <Text style={styles.badgeText}>Angkatan 2024</Text>
-            </View>
-
-            {/* Role Badge */}
-            <View
-              style={[
-                styles.badge,
-                user?.role === "admin" && styles.adminBadge,
-                user?.role === "pengurus" && styles.pengurusBadge,
-              ]}
-            >
-              <Ionicons
-                name={
-                  user?.role === "admin"
-                    ? "shield-checkmark"
-                    : user?.role === "pengurus"
-                    ? "star"
-                    : "person"
-                }
-                size={14}
-                color={
-                  user?.role === "admin"
-                    ? "#FF9500"
-                    : user?.role === "pengurus"
-                    ? "#007AFF"
-                    : "#666"
-                }
-              />
-              <Text
-                style={[
-                  styles.badgeText,
-                  user?.role === "admin" && styles.adminBadgeText,
-                  user?.role === "pengurus" && styles.pengurusBadgeText,
-                ]}
-              >
-                {user?.role === "admin"
-                  ? "Admin"
-                  : user?.role === "pengurus"
-                  ? "Pengurus"
-                  : "Member"}
-              </Text>
-            </View>
+          <Text style={styles.profileName}>{user?.name || "User"}</Text>
+          <Text style={styles.profileNim}>{user?.nim || "-"}</Text>
+          <View style={styles.angkatanBadge}>
+            <Text style={styles.angkatanText}>
+              Angkatan {user?.angkatan || "2024"}
+            </Text>
           </View>
         </View>
 
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Ionicons name="calendar-outline" size={24} color="#000" />
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Kegiatan</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Ionicons name="trophy-outline" size={24} color="#FF9500" />
-            <Text style={styles.statValue}>5</Text>
-            <Text style={styles.statLabel}>Prestasi</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Ionicons name="people-outline" size={24} color="#007AFF" />
-            <Text style={styles.statValue}>245</Text>
-            <Text style={styles.statLabel}>Teman</Text>
-          </View>
-        </View>
-
-        {/* Menu Section */}
+        {/* Profile Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Akun</Text>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Edit Profil")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons name="person-outline" size={22} color="#000" />
+          <Text style={styles.sectionTitle}>Informasi Akun</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Ionicons name="mail-outline" size={20} color="#666" />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoValue}>{user?.email || "-"}</Text>
               </View>
-              <Text style={styles.menuText}>Edit Profil</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Ganti Password")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons name="lock-closed-outline" size={22} color="#000" />
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons name="card-outline" size={20} color="#666" />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>NIM</Text>
+                <Text style={styles.infoValue}>{user?.nim || "-"}</Text>
               </View>
-              <Text style={styles.menuText}>Ganti Password</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Notifikasi")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons name="notifications-outline" size={22} color="#000" />
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={20} color="#666" />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Angkatan</Text>
+                <Text style={styles.infoValue}>{user?.angkatan || "-"}</Text>
               </View>
-              <Text style={styles.menuText}>Notifikasi</Text>
             </View>
-            <View style={styles.menuRight}>
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>3</Text>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color="#666"
+              />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Role</Text>
+                <Text style={styles.infoValue}>
+                  {user?.role === "admin"
+                    ? "Super Admin"
+                    : user?.role === "pengurus"
+                    ? "Pengurus"
+                    : "Anggota"}
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </View>
-          </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Settings Section */}
+        {/* Settings Menu */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pengaturan</Text>
+          <View style={styles.menuCard}>
+            {/* Admin Dashboard - Only for SUPER ADMIN */}
+            {user?.role === "admin" && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => router.push("/(screens)/admin-dashboard" as any)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuLeft}>
+                  <View
+                    style={[styles.menuIconBox, { backgroundColor: "#FFF3E0" }]}
+                  >
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={20}
+                      color="#FF9500"
+                    />
+                  </View>
+                  <Text style={styles.menuText}>Admin Dashboard</Text>
+                </View>
+                <View style={styles.adminBadge}>
+                  <Text style={styles.adminBadgeText}>Super Admin</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Privasi")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons name="shield-outline" size={22} color="#000" />
-              </View>
-              <Text style={styles.menuText}>Privasi</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
-          </TouchableOpacity>
+            {user?.role === "admin" && <View style={styles.menuDivider} />}
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Bahasa")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons name="language-outline" size={22} color="#000" />
+            {/* Notifications */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/(screens)/settings/notifications")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.menuIconBox, { backgroundColor: "#E3F2FD" }]}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={20}
+                    color="#007AFF"
+                  />
+                </View>
+                <Text style={styles.menuText}>Notifikasi</Text>
               </View>
-              <Text style={styles.menuText}>Bahasa</Text>
-            </View>
-            <View style={styles.menuRight}>
-              <Text style={styles.menuValue}>Indonesia</Text>
               <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleComingSoon("Tentang Aplikasi")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.menuIconBox}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={22}
-                  color="#000"
-                />
+            <View style={styles.menuDivider} />
+
+            {/* Privacy */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/(screens)/settings/privacy")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.menuIconBox, { backgroundColor: "#E8F5E9" }]}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#00C853"
+                  />
+                </View>
+                <Text style={styles.menuText}>Privasi & Keamanan</Text>
               </View>
-              <Text style={styles.menuText}>Tentang Aplikasi</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
-          </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            {/* Language */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/(screens)/settings/language")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.menuIconBox, { backgroundColor: "#FFF3E0" }]}
+                >
+                  <Ionicons name="language-outline" size={20} color="#FF9500" />
+                </View>
+                <Text style={styles.menuText}>Bahasa</Text>
+              </View>
+              <View style={styles.languageBadge}>
+                <Text style={styles.languageText}>ID</Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            {/* About */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/(screens)/settings/about")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.menuIconBox, { backgroundColor: "#F3E5F5" }]}
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={20}
+                    color="#9C27B0"
+                  />
+                </View>
+                <Text style={styles.menuText}>Tentang Aplikasi</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+            <Text style={styles.logoutText}>Keluar</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* App Version */}
-        <Text style={styles.version}>Version 1.0.0</Text>
+        {/* Version */}
+        <View style={styles.versionContainer}>
+          <Text style={styles.versionText}>HMIF UMMI v1.0.0</Text>
+        </View>
 
-        {/* Bottom Spacing */}
         <View style={styles.bottomSpace} />
       </ScrollView>
     </SafeAreaView>
@@ -264,102 +266,36 @@ const styles = StyleSheet.create({
     borderColor: "#f0f0f0",
   },
   avatarContainer: {
-    position: "relative",
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 16,
   },
-  editBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#fafafa",
-  },
-  name: {
+  profileName: {
     fontSize: 24,
     fontWeight: "700",
     color: "#000",
     marginBottom: 4,
     letterSpacing: -0.5,
   },
-  email: {
+  profileNim: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  badgesRow: {
-    flexDirection: "row",
-    gap: 8,
+  angkatanBadge: {
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-  },
-  badgeText: {
+  angkatanText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#666",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 24,
-    marginTop: 20,
-    gap: 12,
-  },
-  adminBadge: {
-    backgroundColor: "#FFF3E0",
-    borderColor: "#FFE0B2",
-  },
-  pengurusBadge: {
-    backgroundColor: "#E3F2FD",
-    borderColor: "#BBDEFB",
-  },
-  adminBadgeText: {
-    color: "#FF9500",
-  },
-  pengurusBadgeText: {
-    color: "#007AFF",
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#fafafa",
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-  },
-  statValue: {
-    fontSize: 24,
     fontWeight: "700",
-    color: "#000",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "500",
+    color: "#fff",
   },
   section: {
     paddingHorizontal: 24,
@@ -372,27 +308,61 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     letterSpacing: -0.3,
   },
+  infoCard: {
+    backgroundColor: "#fafafa",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: "#999",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#000",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+    marginVertical: 16,
+  },
+  menuCard: {
+    backgroundColor: "#fafafa",
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fafafa",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   menuIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#fff",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -401,51 +371,56 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
   },
-  menuRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+    marginHorizontal: 12,
   },
-  menuValue: {
-    fontSize: 14,
-    color: "#666",
-  },
-  notifBadge: {
-    backgroundColor: "#FF3B30",
+  adminBadge: {
+    backgroundColor: "#E8F5E9",
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 20,
-    alignItems: "center",
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  notifBadgeText: {
-    fontSize: 11,
+  adminBadgeText: {
+    fontSize: 10,
     fontWeight: "700",
-    color: "#fff",
+    color: "#00C853",
+  },
+  languageBadge: {
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  languageText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#666",
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginHorizontal: 24,
-    marginTop: 32,
+    backgroundColor: "#fafafa",
     padding: 16,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#FF3B30",
-    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#FF3B30",
   },
-  version: {
+  versionContainer: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  versionText: {
     fontSize: 12,
     color: "#999",
-    textAlign: "center",
-    marginTop: 24,
   },
   bottomSpace: {
     height: 20,

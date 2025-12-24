@@ -1,271 +1,417 @@
-import React, { useState } from 'react';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle, G } from "react-native-svg";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-type PeriodType = 'bulanan' | 'semester' | 'tahunan';
-type TransactionType = 'all' | 'income' | 'expense';
+type PeriodType = "bulanan" | "semester" | "tahunan";
+type FilterType = "semua" | "pemasukan" | "pengeluaran";
 
-// Mock data keuangan
-const financialSummary = {
-  balance: 15750000,
-  income: 28500000,
-  expense: 12750000,
+type Transaction = {
+  id: string;
+  type: "pemasukan" | "pengeluaran";
+  category: string;
+  amount: number;
+  date: string;
+  description: string;
 };
 
-// Mock data transaksi
-const transactions = [
+const transactionsData: Transaction[] = [
   {
-    id: '1',
-    date: '2024-12-10',
-    description: 'Iuran Anggota Periode Desember',
+    id: "1",
+    type: "pemasukan",
+    category: "Iuran Anggota",
     amount: 5000000,
-    type: 'income' as const,
-    category: 'Iuran',
+    date: "10 Des 2024",
+    description: "Iuran bulanan anggota HMIF",
   },
   {
-    id: '2',
-    date: '2024-12-08',
-    description: 'Pembelian Konsumsi Workshop AI',
+    id: "2",
+    type: "pengeluaran",
+    category: "Kegiatan",
     amount: 2500000,
-    type: 'expense' as const,
-    category: 'Kegiatan',
+    date: "8 Des 2024",
+    description: "Workshop React Native",
   },
   {
-    id: '3',
-    date: '2024-12-05',
-    description: 'Sponsor dari PT. Tech Indonesia',
-    amount: 10000000,
-    type: 'income' as const,
-    category: 'Sponsor',
+    id: "3",
+    type: "pemasukan",
+    category: "Sponsorship",
+    amount: 3000000,
+    date: "5 Des 2024",
+    description: "Sponsor acara seminar",
   },
   {
-    id: '4',
-    date: '2024-12-03',
-    description: 'Sewa Tempat Seminar Nasional',
+    id: "4",
+    type: "pengeluaran",
+    category: "Operasional",
+    amount: 1000000,
+    date: "3 Des 2024",
+    description: "Pembelian perlengkapan kantor",
+  },
+  {
+    id: "5",
+    type: "pengeluaran",
+    category: "Kegiatan",
+    amount: 1500000,
+    date: "1 Des 2024",
+    description: "Seminar AI & Machine Learning",
+  },
+  {
+    id: "6",
+    type: "pemasukan",
+    category: "Donasi",
+    amount: 2000000,
+    date: "28 Nov 2024",
+    description: "Donasi dari alumni",
+  },
+  {
+    id: "7",
+    type: "pengeluaran",
+    category: "Konsumsi",
+    amount: 800000,
+    date: "25 Nov 2024",
+    description: "Konsumsi rapat pengurus",
+  },
+];
+
+// Chart data
+const incomeData = [
+  {
+    category: "Iuran Anggota",
     amount: 5000000,
-    type: 'expense' as const,
-    category: 'Operasional',
+    percentage: 62.5,
+    color: "#007AFF",
   },
   {
-    id: '5',
-    date: '2024-11-28',
-    description: 'Iuran Anggota Periode November',
-    amount: 4800000,
-    type: 'income' as const,
-    category: 'Iuran',
+    category: "Sponsorship",
+    amount: 3000000,
+    percentage: 37.5,
+    color: "#00C853",
   },
+];
+
+const expenseData = [
+  { category: "Kegiatan", amount: 4000000, percentage: 80, color: "#FF9500" },
   {
-    id: '6',
-    date: '2024-11-25',
-    description: 'Pembelian Perlengkapan LDK',
-    amount: 3500000,
-    type: 'expense' as const,
-    category: 'Kegiatan',
-  },
-  {
-    id: '7',
-    date: '2024-11-20',
-    description: 'Donasi Alumni Angkatan 2019',
-    amount: 7500000,
-    type: 'income' as const,
-    category: 'Donasi',
-  },
-  {
-    id: '8',
-    date: '2024-11-15',
-    description: 'Cetak Sertifikat Workshop',
-    amount: 1750000,
-    type: 'expense' as const,
-    category: 'Operasional',
+    category: "Operasional",
+    amount: 1000000,
+    percentage: 20,
+    color: "#FF3B30",
   },
 ];
 
 export default function FinanceScreen() {
-  const [activePeriod, setActivePeriod] = useState<PeriodType>('bulanan');
-  const [activeFilter, setActiveFilter] = useState<TransactionType>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("bulanan");
+  const [filterType, setFilterType] = useState<FilterType>("semua");
+
+  const totalSaldo = 15000000;
+  const totalPemasukan = 8000000;
+  const totalPengeluaran = 5000000;
+  const percentageChange = "+18.5%";
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    return `${date.getDate()} ${months[date.getMonth()]}`;
+  const formatShortCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}jt`;
+    }
+    return formatCurrency(amount);
   };
 
   const getFilteredTransactions = () => {
-    if (activeFilter === 'all') return transactions;
-    return transactions.filter(t => t.type === activeFilter);
+    if (filterType === "semua") return transactionsData;
+    return transactionsData.filter((t) => t.type === filterType);
   };
 
-  const renderTransaction = (item: any) => (
-    <TouchableOpacity key={item.id} style={styles.transactionCard} activeOpacity={0.7}>
-      <View style={styles.transactionLeft}>
-        <View style={[
-          styles.transactionIcon,
-          { backgroundColor: item.type === 'income' ? '#E8F5E9' : '#FFEBEE' }
-        ]}>
-          <Ionicons
-            name={item.type === 'income' ? 'arrow-down' : 'arrow-up'}
-            size={18}
-            color={item.type === 'income' ? '#00C853' : '#FF3B30'}
-          />
-        </View>
-        <View style={styles.transactionInfo}>
-          <Text style={styles.transactionDescription} numberOfLines={1}>
-            {item.description}
-          </Text>
-          <View style={styles.transactionMeta}>
-            <Text style={styles.transactionDate}>{formatDate(item.date)}</Text>
-            <View style={styles.dot} />
-            <Text style={styles.categoryText}>{item.category}</Text>
+  const renderDonutChart = (
+    data: typeof incomeData,
+    total: number,
+    title: string
+  ) => {
+    const size = 160;
+    const strokeWidth = 25;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const center = size / 2;
+
+    let currentAngle = -90; // Start from top
+
+    return (
+      <View style={styles.donutChartContainer}>
+        <Text style={styles.donutTitle}>{title}</Text>
+
+        <View style={styles.donutChart}>
+          <Svg width={size} height={size}>
+            <G rotation={0} origin={`${center}, ${center}`}>
+              {/* Background circle */}
+              <Circle
+                cx={center}
+                cy={center}
+                r={radius}
+                stroke="#f0f0f0"
+                strokeWidth={strokeWidth}
+                fill="none"
+              />
+
+              {/* Data segments */}
+              {data.map((item, index) => {
+                const percentage = item.percentage;
+                const strokeDashoffset =
+                  circumference - (circumference * percentage) / 100;
+                const rotation = currentAngle;
+
+                currentAngle += (percentage / 100) * 360;
+
+                return (
+                  <Circle
+                    key={index}
+                    cx={center}
+                    cy={center}
+                    r={radius}
+                    stroke={item.color}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    fill="none"
+                    strokeLinecap="round"
+                    rotation={rotation}
+                    origin={`${center}, ${center}`}
+                  />
+                );
+              })}
+            </G>
+          </Svg>
+
+          {/* Center text */}
+          <View style={styles.donutCenter}>
+            <Text style={styles.donutCenterAmount}>
+              {formatShortCurrency(total)}
+            </Text>
+            <Text style={styles.donutCenterLabel}>Total</Text>
           </View>
+        </View>
+
+        {/* Legend */}
+        <View style={styles.donutLegend}>
+          {data.map((item, index) => (
+            <View key={index} style={styles.donutLegendItem}>
+              <View
+                style={[styles.donutLegendDot, { backgroundColor: item.color }]}
+              />
+              <View style={styles.donutLegendContent}>
+                <Text style={styles.donutLegendText}>{item.category}</Text>
+                <Text style={styles.donutLegendAmount}>
+                  {formatShortCurrency(item.amount)} ({item.percentage}%)
+                </Text>
+              </View>
+            </View>
+          ))}
         </View>
       </View>
-      <Text style={[
-        styles.transactionAmount,
-        { color: item.type === 'income' ? '#00C853' : '#FF3B30' }
-      ]}>
-        {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
-      </Text>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Period Filter */}
-        <View style={styles.periodContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.periodContent}
-          >
-            {(['bulanan', 'semester', 'tahunan'] as PeriodType[]).map((period) => (
-              <TouchableOpacity
-                key={period}
-                style={[styles.periodButton, activePeriod === period && styles.periodButtonActive]}
-                onPress={() => setActivePeriod(period)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.periodText, activePeriod === period && styles.periodTextActive]}>
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Saldo Card */}
+        <View style={styles.saldoCard}>
+          <View style={styles.saldoHeader}>
+            <Text style={styles.saldoLabel}>Total Saldo</Text>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="shield-checkmark" size={14} color="#00C853" />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          </View>
+          <Text style={styles.saldoAmount}>{formatCurrency(totalSaldo)}</Text>
+          <View style={styles.changeIndicator}>
+            <Ionicons name="trending-up" size={16} color="#00C853" />
+            <Text style={styles.changeText}>
+              {percentageChange} vs bulan lalu
+            </Text>
+          </View>
         </View>
 
-        {/* Balance Card */}
+        {/* Summary Cards */}
         <View style={styles.summaryContainer}>
-          <View style={styles.balanceCard}>
-            <View style={styles.balanceHeader}>
-              <Text style={styles.balanceLabel}>Total Saldo</Text>
-              <View style={styles.balanceBadge}>
-                <Ionicons name="shield-checkmark" size={12} color="#00C853" />
-                <Text style={styles.balanceBadgeText}>Verified</Text>
+          <View style={[styles.summaryCard, styles.pemasukanCard]}>
+            <View style={styles.summaryHeader}>
+              <View style={styles.summaryIcon}>
+                <Ionicons name="arrow-down" size={20} color="#00C853" />
               </View>
+              <Ionicons name="trending-up" size={16} color="#00C853" />
             </View>
-            <Text style={styles.balanceAmount}>{formatCurrency(financialSummary.balance)}</Text>
-            <View style={styles.balanceFooter}>
-              <Text style={styles.balanceDate}>Update: {new Date().toLocaleDateString('id-ID')}</Text>
-            </View>
+            <Text style={styles.summaryLabel}>Pemasukan</Text>
+            <Text style={[styles.summaryAmount, { color: "#00C853" }]}>
+              {formatCurrency(totalPemasukan)}
+            </Text>
+            <Text style={styles.summarySubtext}>Bulan ini</Text>
           </View>
 
-          {/* Income & Expense Summary */}
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryCardHeader}>
-                <View style={[styles.summaryCardIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="trending-up" size={18} color="#00C853" />
-                </View>
-                <Text style={styles.summaryCardLabel}>Pemasukan</Text>
+          <View style={[styles.summaryCard, styles.pengeluaranCard]}>
+            <View style={styles.summaryHeader}>
+              <View style={styles.summaryIcon}>
+                <Ionicons name="arrow-up" size={20} color="#FF3B30" />
               </View>
-              <Text style={[styles.summaryCardAmount, { color: '#00C853' }]}>
-                {formatCurrency(financialSummary.income)}
-              </Text>
+              <Ionicons name="trending-down" size={16} color="#FF3B30" />
             </View>
-
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryCardHeader}>
-                <View style={[styles.summaryCardIcon, { backgroundColor: '#FFEBEE' }]}>
-                  <Ionicons name="trending-down" size={18} color="#FF3B30" />
-                </View>
-                <Text style={styles.summaryCardLabel}>Pengeluaran</Text>
-              </View>
-              <Text style={[styles.summaryCardAmount, { color: '#FF3B30' }]}>
-                {formatCurrency(financialSummary.expense)}
-              </Text>
-            </View>
+            <Text style={styles.summaryLabel}>Pengeluaran</Text>
+            <Text style={[styles.summaryAmount, { color: "#FF3B30" }]}>
+              {formatCurrency(totalPengeluaran)}
+            </Text>
+            <Text style={styles.summarySubtext}>Bulan ini</Text>
           </View>
         </View>
 
-        {/* Transaction Section */}
+        {/* Donut Charts Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Transaksi</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>Lihat Semua</Text>
-            </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Breakdown Keuangan</Text>
+
+          <View style={styles.chartsGrid}>
+            {renderDonutChart(incomeData, totalPemasukan, "Pemasukan")}
+            {renderDonutChart(expenseData, totalPengeluaran, "Pengeluaran")}
           </View>
-          
-          {/* Filter Buttons */}
-          <View style={styles.filterContainer}>
+        </View>
+
+        {/* Period Filter */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+
+          <View style={styles.periodFilter}>
             <TouchableOpacity
-              style={[styles.filterButton, activeFilter === 'all' && styles.filterButtonActive]}
-              onPress={() => setActiveFilter('all')}
+              style={[
+                styles.periodButton,
+                selectedPeriod === "bulanan" && styles.periodButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod("bulanan")}
               activeOpacity={0.7}
             >
-              <Text style={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}>
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === "bulanan" && styles.periodTextActive,
+                ]}
+              >
+                Bulanan
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                selectedPeriod === "semester" && styles.periodButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod("semester")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === "semester" && styles.periodTextActive,
+                ]}
+              >
+                Semester
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.periodButton,
+                selectedPeriod === "tahunan" && styles.periodButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod("tahunan")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === "tahunan" && styles.periodTextActive,
+                ]}
+              >
+                Tahunan
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Transaction Filter */}
+          <View style={styles.transactionFilter}>
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                filterType === "semua" && styles.filterChipActive,
+              ]}
+              onPress={() => setFilterType("semua")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterType === "semua" && styles.filterChipTextActive,
+                ]}
+              >
                 Semua
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterButton, activeFilter === 'income' && styles.filterButtonActive]}
-              onPress={() => setActiveFilter('income')}
+              style={[
+                styles.filterChip,
+                filterType === "pemasukan" && styles.filterChipActive,
+              ]}
+              onPress={() => setFilterType("pemasukan")}
               activeOpacity={0.7}
             >
-              <Ionicons 
-                name="arrow-down" 
-                size={12} 
-                color={activeFilter === 'income' ? '#fff' : '#666'} 
+              <Ionicons
+                name="arrow-down"
+                size={14}
+                color={filterType === "pemasukan" ? "#fff" : "#00C853"}
               />
-              <Text style={[styles.filterText, activeFilter === 'income' && styles.filterTextActive]}>
-                Masuk
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterType === "pemasukan" && styles.filterChipTextActive,
+                ]}
+              >
+                Pemasukan
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterButton, activeFilter === 'expense' && styles.filterButtonActive]}
-              onPress={() => setActiveFilter('expense')}
+              style={[
+                styles.filterChip,
+                filterType === "pengeluaran" && styles.filterChipActive,
+              ]}
+              onPress={() => setFilterType("pengeluaran")}
               activeOpacity={0.7}
             >
-              <Ionicons 
-                name="arrow-up" 
-                size={12} 
-                color={activeFilter === 'expense' ? '#fff' : '#666'} 
+              <Ionicons
+                name="arrow-up"
+                size={14}
+                color={filterType === "pengeluaran" ? "#fff" : "#FF3B30"}
               />
-              <Text style={[styles.filterText, activeFilter === 'expense' && styles.filterTextActive]}>
-                Keluar
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterType === "pengeluaran" && styles.filterChipTextActive,
+                ]}
+              >
+                Pengeluaran
               </Text>
             </TouchableOpacity>
           </View>
@@ -273,7 +419,52 @@ export default function FinanceScreen() {
 
         {/* Transactions List */}
         <View style={styles.transactionsList}>
-          {getFilteredTransactions().map(renderTransaction)}
+          {getFilteredTransactions().map((transaction) => (
+            <View key={transaction.id} style={styles.transactionCard}>
+              <View style={styles.transactionLeft}>
+                <View
+                  style={[
+                    styles.transactionIcon,
+                    transaction.type === "pemasukan"
+                      ? styles.iconPemasukan
+                      : styles.iconPengeluaran,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      transaction.type === "pemasukan"
+                        ? "arrow-down"
+                        : "arrow-up"
+                    }
+                    size={20}
+                    color={
+                      transaction.type === "pemasukan" ? "#00C853" : "#FF3B30"
+                    }
+                  />
+                </View>
+                <View style={styles.transactionInfo}>
+                  <Text style={styles.transactionCategory}>
+                    {transaction.category}
+                  </Text>
+                  <Text style={styles.transactionDescription}>
+                    {transaction.description}
+                  </Text>
+                  <Text style={styles.transactionDate}>{transaction.date}</Text>
+                </View>
+              </View>
+              <Text
+                style={[
+                  styles.transactionAmount,
+                  transaction.type === "pemasukan"
+                    ? styles.amountPemasukan
+                    : styles.amountPengeluaran,
+                ]}
+              >
+                {transaction.type === "pemasukan" ? "+" : "-"}{" "}
+                {formatCurrency(transaction.amount)}
+              </Text>
+            </View>
+          ))}
         </View>
 
         {/* Bottom Spacing */}
@@ -286,239 +477,302 @@ export default function FinanceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   content: {
     flex: 1,
   },
-  periodContainer: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  periodContent: {
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  periodButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1.5,
-    borderColor: '#f0f0f0',
-  },
-  periodButtonActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  periodText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  periodTextActive: {
-    color: '#fff',
-  },
-  summaryContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    gap: 12,
-  },
-  balanceCard: {
-    backgroundColor: '#000',
-    borderRadius: 20,
+  saldoCard: {
+    backgroundColor: "#000",
+    margin: 24,
     padding: 24,
+    borderRadius: 20,
   },
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  saldoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  balanceLabel: {
+  saldoLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    opacity: 0.7,
+    color: "rgba(255, 255, 255, 0.7)",
+    fontWeight: "500",
   },
-  balanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 8,
+    backgroundColor: "rgba(0, 200, 83, 0.2)",
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  balanceBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
+  verifiedText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#00C853",
   },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 12,
+  saldoAmount: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 8,
     letterSpacing: -1,
   },
-  balanceFooter: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  changeIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  balanceDate: {
-    fontSize: 12,
-    color: '#fff',
-    opacity: 0.5,
+  changeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#00C853",
   },
-  summaryRow: {
-    flexDirection: 'row',
+  summaryContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 24,
     gap: 12,
+    marginBottom: 8,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#fafafa',
-    borderRadius: 16,
     padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
-  summaryCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  pemasukanCard: {
+    backgroundColor: "#F0FFF4",
+    borderColor: "#C8E6C9",
+  },
+  pengeluaranCard: {
+    backgroundColor: "#FFF5F5",
+    borderColor: "#FFCDD2",
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
-  summaryCardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+  summaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  summaryCardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+  summaryLabel: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 8,
+    fontWeight: "500",
   },
-  summaryCardAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+  summaryAmount: {
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  summarySubtext: {
+    fontSize: 11,
+    color: "#999",
   },
   section: {
     paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    marginTop: 32,
   },
   sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  chartsGrid: {
+    gap: 24,
+  },
+  donutChartContainer: {
+    backgroundColor: "#fafafa",
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  donutTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  donutChart: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    position: "relative",
+  },
+  donutCenter: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  donutCenterAmount: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#000',
+    fontWeight: "700",
+    color: "#000",
     letterSpacing: -0.5,
   },
-  seeAll: {
+  donutCenterLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+  },
+  donutLegend: {
+    gap: 12,
+  },
+  donutLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  donutLegendDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  donutLegendContent: {
+    flex: 1,
+  },
+  donutLegendText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 2,
   },
-  filterContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  donutLegendAmount: {
+    fontSize: 12,
+    color: "#666",
   },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  periodFilter: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
+  periodButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#f0f0f0",
+  },
+  periodButtonActive: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  periodText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#666",
+  },
+  periodTextActive: {
+    color: "#fff",
+  },
+  transactionFilter: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderWidth: 1.5,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
+    gap: 6,
   },
-  filterButtonActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+  filterChipActive: {
+    backgroundColor: "#000",
+    borderColor: "#000",
   },
-  filterText: {
+  filterChipText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
-  filterTextActive: {
-    color: '#fff',
+  filterChipTextActive: {
+    color: "#fff",
   },
   transactionsList: {
     paddingHorizontal: 24,
-    gap: 10,
+    paddingTop: 16,
+    gap: 12,
   },
   transactionCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fafafa',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fafafa",
+    padding: 16,
     borderRadius: 16,
-    padding: 14,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
   },
   transactionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
+    gap: 12,
   },
   transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconPemasukan: {
+    backgroundColor: "#E8F5E9",
+  },
+  iconPengeluaran: {
+    backgroundColor: "#FFEBEE",
   },
   transactionInfo: {
     flex: 1,
-    gap: 4,
+  },
+  transactionCategory: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 4,
   },
   transactionDescription: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  transactionMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
   },
   transactionDate: {
     fontSize: 12,
-    color: '#999',
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#ccc',
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#999',
+    color: "#999",
   },
   transactionAmount: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: "700",
     letterSpacing: -0.3,
-    marginLeft: 8,
+  },
+  amountPemasukan: {
+    color: "#00C853",
+  },
+  amountPengeluaran: {
+    color: "#FF3B30",
   },
   bottomSpace: {
-    height: 20,
+    height: 40,
   },
 });

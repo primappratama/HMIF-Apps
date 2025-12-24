@@ -1,138 +1,162 @@
-import React, { useState } from 'react';
+import { useAuth } from "@/context/AuthContext";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  deleteKegiatan,
+  getAllKegiatan,
+  Kegiatan,
+} from "@/services/kegiatan.service";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
   Image,
   RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-type FilterType = 'semua' | 'mendatang' | 'berlangsung' | 'selesai';
-
-// Mock data kegiatan
-const activitiesData = [
-  {
-    id: '1',
-    title: 'Workshop AI & Machine Learning',
-    category: 'Workshop',
-    date: '15 Desember 2024',
-    time: '09:00 - 16:00 WIB',
-    location: 'Lab Komputer Gedung A',
-    status: 'mendatang',
-    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400',
-    participants: 45,
-    maxParticipants: 50,
-    description: 'Workshop intensif tentang AI dan Machine Learning untuk mahasiswa',
-  },
-  {
-    id: '2',
-    title: 'Seminar Nasional: Future of Technology',
-    category: 'Seminar',
-    date: '20 Desember 2024',
-    time: '08:00 - 15:00 WIB',
-    location: 'Auditorium Utama',
-    status: 'mendatang',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
-    participants: 120,
-    maxParticipants: 200,
-    description: 'Seminar nasional dengan pembicara dari perusahaan tech terkemuka',
-  },
-  {
-    id: '3',
-    title: 'Hackathon HMIF 2025',
-    category: 'Competition',
-    date: '10 Januari 2025',
-    time: '08:00 - 20:00 WIB',
-    location: 'Kampus UMMI',
-    status: 'mendatang',
-    image: 'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=400',
-    participants: 30,
-    maxParticipants: 40,
-    description: '48 jam coding marathon dengan hadiah total 10 juta rupiah',
-  },
-  {
-    id: '4',
-    title: 'LDK (Latihan Dasar Kepemimpinan)',
-    category: 'Training',
-    date: '5 Desember 2024',
-    time: '07:00 - 17:00 WIB',
-    location: 'Gunung Gede',
-    status: 'selesai',
-    image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400',
-    participants: 85,
-    maxParticipants: 85,
-    description: 'Pelatihan kepemimpinan untuk pengurus HMIF',
-  },
-  {
-    id: '5',
-    title: 'Gathering Angkatan 2024',
-    category: 'Social',
-    date: '1 Desember 2024',
-    time: '16:00 - 21:00 WIB',
-    location: 'Taman Kota',
-    status: 'selesai',
-    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400',
-    participants: 65,
-    maxParticipants: 70,
-    description: 'Acara kumpul bersama mahasiswa angkatan 2024',
-  },
-];
+type FilterType = "semua" | "mendatang" | "berlangsung" | "selesai";
 
 export default function KegiatanScreen() {
-  const [activeFilter, setActiveFilter] = useState<FilterType>('semua');
+  const router = useRouter();
+  const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<FilterType>("semua");
   const [refreshing, setRefreshing] = useState(false);
+  const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const onRefresh = () => {
+  // Check if user can manage kegiatan (admin or pengurus)
+  const canManage = user?.role === "admin" || user?.role === "pengurus";
+
+  useEffect(() => {
+    loadKegiatan();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadKegiatan();
+    }, [])
+  );
+
+  const loadKegiatan = async () => {
+    try {
+      const data = await getAllKegiatan();
+      setKegiatanList(data);
+    } catch (error) {
+      console.error("Error loading kegiatan:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
+    await loadKegiatan();
+    setRefreshing(false);
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    Alert.alert(
+      "Hapus Kegiatan",
+      `Apakah Anda yakin ingin menghapus "${title}"?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteKegiatan(id);
+              await loadKegiatan();
+              Alert.alert("Sukses", "Kegiatan berhasil dihapus");
+            } catch (error) {
+              Alert.alert("Error", "Gagal menghapus kegiatan");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = (id: string) => {
+    router.push({
+      pathname: "/(screens)/kegiatan-form",
+      params: { id },
+    });
   };
 
   const getFilteredActivities = () => {
-    if (activeFilter === 'semua') return activitiesData;
-    return activitiesData.filter(activity => activity.status === activeFilter);
+    if (activeFilter === "semua") return kegiatanList;
+    return kegiatanList.filter((activity) => activity.status === activeFilter);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'mendatang':
-        return '#007AFF';
-      case 'berlangsung':
-        return '#00C853';
-      case 'selesai':
-        return '#999';
+      case "mendatang":
+        return "#007AFF";
+      case "berlangsung":
+        return "#00C853";
+      case "selesai":
+        return "#999";
       default:
-        return '#666';
+        return "#666";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'mendatang':
-        return 'Akan Datang';
-      case 'berlangsung':
-        return 'Berlangsung';
-      case 'selesai':
-        return 'Selesai';
+      case "mendatang":
+        return "Akan Datang";
+      case "berlangsung":
+        return "Berlangsung";
+      case "selesai":
+        return "Selesai";
       default:
         return status;
     }
   };
 
-  const renderActivityCard = (item: any) => (
-    <TouchableOpacity key={item.id} style={styles.activityCard} activeOpacity={0.8}>
+  const renderActivityCard = (item: Kegiatan) => (
+    <View key={item.id} style={styles.activityCard}>
       <Image source={{ uri: item.image }} style={styles.activityImage} />
-      
+
+      {/* Action Buttons - Only for admin/pengurus */}
+      {canManage && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => handleEdit(item.id)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="create" size={16} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDelete(item.id, item.title)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="trash" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.activityContent}>
         {/* Category & Status */}
         <View style={styles.activityHeader}>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{item.category}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(item.status) },
+            ]}
+          >
+            <View style={styles.statusDot} />
             <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
         </View>
@@ -148,22 +172,18 @@ export default function KegiatanScreen() {
         </Text>
 
         {/* Details */}
-        <View style={styles.detailsRow}>
-          <View style={styles.detailItem}>
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={16} color="#666" />
             <Text style={styles.detailText}>{item.date}</Text>
           </View>
-        </View>
 
-        <View style={styles.detailsRow}>
-          <View style={styles.detailItem}>
+          <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={16} color="#666" />
             <Text style={styles.detailText}>{item.time}</Text>
           </View>
-        </View>
 
-        <View style={styles.detailsRow}>
-          <View style={styles.detailItem}>
+          <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={16} color="#666" />
             <Text style={styles.detailText}>{item.location}</Text>
           </View>
@@ -178,63 +198,115 @@ export default function KegiatanScreen() {
             </Text>
           </View>
           <View style={styles.progressBar}>
-            <View 
+            <View
               style={[
-                styles.progressFill, 
-                { width: `${(item.participants / item.maxParticipants) * 100}%` }
-              ]} 
+                styles.progressFill,
+                {
+                  width: `${Math.min(
+                    (item.participants / item.maxParticipants) * 100,
+                    100
+                  )}%`,
+                },
+              ]}
             />
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       {/* Filter Section */}
       <View style={styles.filterSection}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterContent}
         >
           <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'semua' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('semua')}
+            style={[
+              styles.filterButton,
+              activeFilter === "semua" && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter("semua")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, activeFilter === 'semua' && styles.filterTextActive]}>
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === "semua" && styles.filterTextActive,
+              ]}
+            >
               Semua
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'mendatang' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('mendatang')}
+            style={[
+              styles.filterButton,
+              activeFilter === "mendatang" && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter("mendatang")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, activeFilter === 'mendatang' && styles.filterTextActive]}>
+            <Ionicons
+              name="time"
+              size={16}
+              color={activeFilter === "mendatang" ? "#fff" : "#666"}
+            />
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === "mendatang" && styles.filterTextActive,
+              ]}
+            >
               Akan Datang
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'berlangsung' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('berlangsung')}
+            style={[
+              styles.filterButton,
+              activeFilter === "berlangsung" && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter("berlangsung")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, activeFilter === 'berlangsung' && styles.filterTextActive]}>
+            <Ionicons
+              name="play-circle"
+              size={16}
+              color={activeFilter === "berlangsung" ? "#fff" : "#666"}
+            />
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === "berlangsung" && styles.filterTextActive,
+              ]}
+            >
               Berlangsung
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.filterButton, activeFilter === 'selesai' && styles.filterButtonActive]}
-            onPress={() => setActiveFilter('selesai')}
+            style={[
+              styles.filterButton,
+              activeFilter === "selesai" && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter("selesai")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, activeFilter === 'selesai' && styles.filterTextActive]}>
+            <Ionicons
+              name="checkmark-circle"
+              size={16}
+              color={activeFilter === "selesai" ? "#fff" : "#666"}
+            />
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === "selesai" && styles.filterTextActive,
+              ]}
+            >
               Selesai
             </Text>
           </TouchableOpacity>
@@ -242,24 +314,53 @@ export default function KegiatanScreen() {
       </View>
 
       {/* Activities List */}
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#000"
           />
         }
       >
-        <View style={styles.activitiesList}>
-          {getFilteredActivities().map(renderActivityCard)}
-        </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Memuat kegiatan...</Text>
+          </View>
+        ) : getFilteredActivities().length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyTitle}>Belum Ada Kegiatan</Text>
+            <Text style={styles.emptyText}>
+              {activeFilter === "semua"
+                ? "Belum ada kegiatan yang tersedia"
+                : `Tidak ada kegiatan dengan status "${getStatusText(
+                    activeFilter
+                  )}"`}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.activitiesList}>
+            {getFilteredActivities().map(renderActivityCard)}
+          </View>
+        )}
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpace} />
       </ScrollView>
+
+      {/* Floating Action Button - Only for admin/pengurus */}
+      {canManage && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push("/(screens)/kegiatan-form")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -267,141 +368,230 @@ export default function KegiatanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   filterSection: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   filterContent: {
     paddingHorizontal: 24,
-    gap: 8,
+    gap: 10,
   },
   filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1.5,
-    borderColor: '#f0f0f0',
+    backgroundColor: "#f5f5f5",
+    borderWidth: 2,
+    borderColor: "#f0f0f0",
+    gap: 6,
   },
   filterButtonActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: "#000",
+    borderColor: "#000",
   },
   filterText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   filterTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#999",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
   },
   activitiesList: {
     padding: 24,
     gap: 20,
   },
   activityCard: {
-    backgroundColor: '#fafafa',
+    backgroundColor: "#fafafa",
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
+    position: "relative",
   },
   activityImage: {
-    width: '100%',
+    width: "100%",
     height: 160,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
+  },
+  actionButtons: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    flexDirection: "row",
+    gap: 8,
+    zIndex: 10,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FF3B30",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   activityContent: {
     padding: 20,
   },
   activityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   categoryBadge: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: "#000",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   categoryText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#666',
+    fontWeight: "700",
+    color: "#fff",
   },
   statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
+    gap: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#fff",
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   activityTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+    fontWeight: "700",
+    color: "#000",
     marginBottom: 8,
     letterSpacing: -0.3,
     lineHeight: 24,
   },
   activityDescription: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     lineHeight: 20,
     marginBottom: 16,
   },
-  detailsRow: {
-    marginBottom: 8,
+  detailsContainer: {
+    gap: 8,
+    marginBottom: 16,
   },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   detailText: {
     fontSize: 13,
-    color: '#666',
+    color: "#666",
+    flex: 1,
   },
   participantsRow: {
-    marginTop: 12,
-    paddingTop: 12,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: "#f0f0f0",
   },
   participantsInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   participantsText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   progressBar: {
-    height: 6,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 3,
-    overflow: 'hidden',
+    height: 8,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 4,
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#00C853',
-    borderRadius: 3,
+    height: "100%",
+    backgroundColor: "#00C853",
+    borderRadius: 4,
+  },
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   bottomSpace: {
-    height: 20,
+    height: 80,
   },
 });

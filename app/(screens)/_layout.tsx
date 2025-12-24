@@ -1,7 +1,6 @@
-import { Stack } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Stack, useRouter } from "expo-router";
+import { TouchableOpacity } from "react-native";
 
 export default function ScreensLayout() {
   const router = useRouter();
@@ -10,11 +9,11 @@ export default function ScreensLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: "#fff",
         },
-        headerTintColor: '#000',
+        headerTintColor: "#000",
         headerTitleStyle: {
-          fontWeight: '700',
+          fontWeight: "700",
           fontSize: 18,
         },
         headerShadowVisible: true,
@@ -25,9 +24,9 @@ export default function ScreensLayout() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: '#f5f5f5',
-              justifyContent: 'center',
-              alignItems: 'center',
+              backgroundColor: "#f5f5f5",
+              justifyContent: "center",
+              alignItems: "center",
               marginLeft: 8,
             }}
             activeOpacity={0.7}
@@ -37,35 +36,93 @@ export default function ScreensLayout() {
         ),
       }}
     >
-      <Stack.Screen 
+      <Stack.Screen
         name="history"
         options={{
-          title: 'Sejarah HMIF',
+          title: "Sejarah HMIF",
         }}
       />
-      <Stack.Screen 
+      <Stack.Screen
+        name="organization"
+        options={{
+          title: "Struktur Organisasi",
+        }}
+      />
+      <Stack.Screen
         name="finance"
         options={{
-          title: 'Keuangan HMIF',
+          title: "Keuangan HMIF",
         }}
       />
-      <Stack.Screen 
+      <Stack.Screen
         name="nim-finder"
         options={{
-          title: 'NIM Finder',
+          title: "NIM Finder",
         }}
       />
-      <Stack.Screen 
+      <Stack.Screen
         name="kegiatan"
         options={{
-          title: 'Kegiatan HMIF',
+          title: "Kegiatan HMIF",
         }}
       />
-      <Stack.Screen 
+      <Stack.Screen
+        name="kegiatan-form"
+        options={{
+          title: "Form Kegiatan",
+        }}
+      />
+      <Stack.Screen
         name="news-detail"
         options={{
-          title: 'Detail Berita',
+          title: "Detail Berita",
         }}
+      />
+      <Stack.Screen
+        name="edit-profile"
+        options={{
+          title: "Edit Profil",
+        }}
+      />
+      <Stack.Screen
+        name="change-password"
+        options={{
+          title: "Ganti Password",
+        }}
+      />
+      <Stack.Screen
+        name="notifications"
+        options={{
+          title: "Notifikasi",
+        }}
+      />
+      <Stack.Screen
+        name="privacy"
+        options={{
+          title: "Kebijakan Privasi",
+        }}
+      />
+      <Stack.Screen
+        name="language"
+        options={{
+          title: "Bahasa",
+        }}
+      />
+      <Stack.Screen
+        name="about"
+        options={{
+          title: "Tentang Aplikasi",
+        }}
+      />
+      <Stack.Screen
+        name="calendar"
+        options={{
+          title: "Kalender Kegiatan",
+        }}
+      />
+      <Stack.Screen
+        name="admin-dashboard"
+        options={{ title: "Admin Dashboard" }}
       />
     </Stack>
   );
