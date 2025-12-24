@@ -106,20 +106,45 @@ export const logout = async (): Promise<void> => {
   return Promise.resolve();
 };
 
+// User Management Functions
 export const getAllUsers = async (): Promise<User[]> => {
-  return users;
+  // Include super admin in the list
+  return [SUPER_ADMIN.user, ...users];
 };
 
 export const updateUserRole = async (
   userId: string,
   newRole: UserRole
 ): Promise<void> => {
+  // Prevent changing super admin role
+  if (userId === SUPER_ADMIN.user.id) {
+    throw new Error("Tidak dapat mengubah role Super Admin");
+  }
+
   const userIndex = users.findIndex((u) => u.id === userId);
   if (userIndex !== -1) {
     users[userIndex].role = newRole;
+  } else {
+    throw new Error("User tidak ditemukan");
   }
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
+  // Prevent deleting super admin
+  if (userId === SUPER_ADMIN.user.id) {
+    throw new Error("Tidak dapat menghapus Super Admin");
+  }
+
   users = users.filter((u) => u.id !== userId);
+};
+
+export const getUserStats = async () => {
+  const allUsers = await getAllUsers();
+
+  return {
+    total: allUsers.length,
+    admin: allUsers.filter((u) => u.role === "admin").length,
+    pengurus: allUsers.filter((u) => u.role === "pengurus").length,
+    anggota: allUsers.filter((u) => u.role === "anggota").length,
+  };
 };
